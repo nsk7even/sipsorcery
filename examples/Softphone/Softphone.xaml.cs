@@ -23,6 +23,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Microsoft.Extensions.Logging;
+using Serilog;
 using SIPSorcery.SIP;
 using SIPSorcery.SIP.App;
 using SIPSorcery.SoftPhone.Signalling;
@@ -38,7 +39,8 @@ namespace SIPSorcery.SoftPhone
         private const int ZINDEX_TOP = 10;
         private const int REGISTRATION_EXPIRY = 180;
 
-        private static ILogger logger = SIPSorcery.LogFactory.CreateLogger<SoftPhone>();
+        private static Microsoft.Extensions.Logging.ILogger logger = SIPSorcery.LogFactory.CreateLogger<SoftPhone>();
+        private string _logPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SIPSorcery", "Softphone.log");
 
         private string m_sipUsername = SIPSoftPhoneState.SIPUsername;
         private string m_sipPassword = SIPSoftPhoneState.SIPPassword;
@@ -67,6 +69,8 @@ namespace SIPSorcery.SoftPhone
         public SoftPhone()
         {
             InitializeComponent();
+
+            InitLogger();
 
             //if(!m_useAudioScope)
             //{
@@ -97,6 +101,23 @@ namespace SIPSorcery.SoftPhone
             }
 
             DataObject.AddPastingHandler(_rttOutgoingBox, _rttOutgoingBox_OnPaste);
+        }
+
+        private void InitLogger()
+        {
+            if (SIPSoftPhoneState.EnableLog)
+            {
+                Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .Enrich.FromLogContext()
+                .WriteTo.Debug()
+                .WriteTo.Console()
+                .WriteTo.File(_logPath)
+                .CreateLogger();
+
+                var factory = new Serilog.Extensions.Logging.SerilogLoggerFactory(Log.Logger);
+                SIPSorcery.LogFactory.Set(factory);
+            }
         }
 
         private async void OnWindowLoaded(object sender, RoutedEventArgs e)
@@ -798,7 +819,12 @@ namespace SIPSorcery.SoftPhone
                 statusHistory.RemoveAt(10);
             }
             string statusHistoryString = statusHistory.Aggregate("Previous states:" + Environment.NewLine,
-                    (accu, item) => accu += $"{Environment.NewLine} {item.Time.ToString("yyyy-MM-dd HH:mm:ss")}: {item.Message}");
+                    (accu, item) => accu += $"{Environment.NewLine} {item.Time:yyyy-MM-dd HH:mm:ss}: {item.Message}");
+
+            if (SIPSoftPhoneState.EnableLog)
+            {
+                statusHistoryString += Environment.NewLine + Environment.NewLine + $"Logfile: {_logPath}";
+            }
 
             Dispatcher.DoOnUIThread(() =>
             {

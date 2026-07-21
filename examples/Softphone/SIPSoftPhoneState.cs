@@ -38,8 +38,9 @@ namespace SIPSorcery.SoftPhone
         public static readonly string SIPPassword = ConfigurationManager.AppSettings["SIPPassword"];    // Get the SIP password from the config file.
         public static readonly string SIPServer = ConfigurationManager.AppSettings["SIPServer"];        // Get the SIP server from the config file.
         public static readonly string SIPFromName = ConfigurationManager.AppSettings["SIPFromName"];    // Get the SIP From display name from the config file.
-        public static readonly bool UseAudioScope = Boolean.Parse(ConfigurationManager.AppSettings["UseAudioScope"]);
-        public static int AudioOutDeviceIndex = Int32.Parse(ConfigurationManager.AppSettings["AudioOutDeviceIndex"]);
+        public static readonly bool UseAudioScope = Boolean.Parse(ConfigurationManager.AppSettings["UseAudioScope"] ?? "false");
+        public static int AudioOutDeviceIndex = Int32.Parse(ConfigurationManager.AppSettings["AudioOutDeviceIndex"] ?? "-1");
+        public static readonly bool EnableLog = Boolean.Parse(ConfigurationManager.AppSettings["Enable Log"] ?? "false");
         public static List<string> QuickDialEntries = new();
 
         public static IPAddress PublicIPAddress;
