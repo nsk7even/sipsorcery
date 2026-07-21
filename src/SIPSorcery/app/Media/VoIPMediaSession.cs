@@ -341,6 +341,14 @@ namespace SIPSorcery.Media
 
                 Media.TextSink.GotTextRtp(remoteEndPoint, hdr.SyncSource, hdr.SequenceNumber, hdr.Timestamp, hdr.PayloadType, hdr.MarkerBit, rtpPacket.GetPayloadBytes());
             }
+            else if (mediaType == SDPMediaTypesEnum.audio && Media.AudioSink != null)
+            {
+                //no logging for received audio packets
+            }
+            else if (mediaType == SDPMediaTypesEnum.video && Media.VideoSink != null)
+            {
+                //no logging for received video packets
+            }
             else
             {
                 logger.LogWarning(nameof(RtpMediaPacketReceived) + " RTP packet without a media handler received from {RemoteEndPoint} ssrc {SyncSource} seqnum {SequenceNumber} timestamp {Timestamp} payload type {PayloadType}.", remoteEndPoint, hdr.SyncSource, hdr.SequenceNumber, hdr.Timestamp, hdr.PayloadType);
@@ -371,7 +379,7 @@ namespace SIPSorcery.Media
 
             if (HasText)
             {
-                // TODO can be put on / taken off hold?
+                await Media.TextSource.PauseText();
             }
         }
 
@@ -410,7 +418,7 @@ namespace SIPSorcery.Media
 
             if (HasText)
             {
-                // TODO can be put on / taken off hold?
+                await Media.TextSource.ResumeText();
             }
         }
     }
