@@ -23,6 +23,7 @@ using SIPSorcery.Media;
 using SIPSorcery.Net;
 using SIPSorcery.SIP;
 using SIPSorcery.SIP.App;
+using SIPSorcery.SoftPhone.Signalling;
 using SIPSorceryMedia.Abstractions;
 using SIPSorceryMedia.Encoders;
 using SIPSorceryMedia.Windows;
@@ -56,6 +57,8 @@ namespace SIPSorcery.SoftPhone
         public event Action<SIPClient> RemotePutOnHold;            // Fires when the remote call party puts us on hold.	
         public event Action<SIPClient> RemoteTookOffHold;          // Fires when the remote call party takes us off hold.
 
+        public event Action<SIPClient, TextEventArgs> TextReceived;// Fires when a realtime text block was received
+
         /// <summary>
         /// Once a call is established this holds the properties of the established SIP dialogue.
         /// </summary>
@@ -82,6 +85,9 @@ namespace SIPSorcery.SoftPhone
             get { return m_userAgent.IsOnLocalHold || m_userAgent.IsOnRemoteHold; }
         }
 
+        /// <summary>Endpoint for sending and receiving realtime text</summary>
+        public TextEndPoint RttEndPoint { get; set; }
+
         public SIPClient(SIPTransport sipTransport)
         {
             m_sipTransport = sipTransport;
@@ -103,7 +109,7 @@ namespace SIPSorcery.SoftPhone
         /// <param name="destination">The SIP URI to place a call to. The destination can be a full SIP URI in which case the call will
         /// be placed anonymously directly to that URI. Alternatively it can be just the user portion of a URI in which case it will
         /// be sent to the configured SIP server.</param>
-        public async Task Call(string destination)
+        public async Task Call(string destination, SIPProtocolsEnum protocol, bool useAudio, bool useVideo, bool useText)
         {
             // Determine if this is a direct anonymous call or whether it should be placed using the pre-configured SIP server account. 
             SIPURI callURI = null;
@@ -126,6 +132,11 @@ namespace SIPSorcery.SoftPhone
                 fromHeader = (new SIPFromHeader(m_sipFromName, new SIPURI(m_sipUsername, m_sipServer, null), null)).ToString();
             }
 
+            if (!destination.Contains("transport"))
+            {
+                callURI.Protocol = protocol;
+            }
+
             StatusMessage(this, $"Starting call to {callURI}.");
 
             var dstEndpoint = await SIPDns.ResolveAsync(callURI, false, _cts.Token);
@@ -140,7 +151,7 @@ namespace SIPSorcery.SoftPhone
                 System.Diagnostics.Debug.WriteLine($"DNS lookup result for {callURI}: {dstEndpoint}.");
                 SIPCallDescriptor callDescriptor = new SIPCallDescriptor(sipUsername, sipPassword, callURI.ToString(), fromHeader, null, null, null, null, SIPCallDirection.Out, _sdpMimeContentType, null, null);
 
-                MediaSession = CreateMediaSession();
+                MediaSession = CreateMediaSession(useAudio, useVideo, useText);
 
                 m_userAgent.RemotePutOnHold += OnRemotePutOnHold;
                 m_userAgent.RemoteTookOffHold += OnRemoteTookOffHold;
@@ -186,15 +197,19 @@ namespace SIPSorcery.SoftPhone
                 // audio only call.
                 bool hasAudio = true;
                 bool hasVideo = false;
+                bool hasText = false;
 
                 if (sipRequest.Body != null)
                 {
                     SDP offerSDP = SDP.ParseSDPDescription(sipRequest.Body);
                     hasAudio = offerSDP.Media.Any(x => x.Media == SDPMediaTypesEnum.audio && x.MediaStreamStatus != MediaStreamStatusEnum.Inactive);
                     hasVideo = offerSDP.Media.Any(x => x.Media == SDPMediaTypesEnum.video && x.MediaStreamStatus != MediaStreamStatusEnum.Inactive);
+                    hasText = offerSDP.Media.Any(x => x.Media == SDPMediaTypesEnum.text && x.MediaStreamStatus != MediaStreamStatusEnum.Inactive);
+
+                    System.Diagnostics.Debug.WriteLine(sipRequest.Body);
                 }
 
-                MediaSession = CreateMediaSession();
+                MediaSession = CreateMediaSession(hasAudio, hasVideo, hasText);
 
                 m_userAgent.RemotePutOnHold += OnRemotePutOnHold;
                 m_userAgent.RemoteTookOffHold += OnRemoteTookOffHold;
@@ -295,10 +310,20 @@ namespace SIPSorcery.SoftPhone
         /// Creates the media session to use with the SIP call.
         /// </summary>
         /// <returns>A new media session object.</returns>
-        private VoIPMediaSession CreateMediaSession()
+        private VoIPMediaSession CreateMediaSession(bool hasAudio, bool hasVideo, bool hasText)
         {
-            var windowsAudioEndPoint = new WindowsAudioEndPoint(new AudioEncoder(), m_audioOutDeviceIndex);
-            var windowsVideoEndPoint = new WindowsVideoEndPoint(new VpxVideoEncoder());
+            var windowsAudioEndPoint = hasAudio ? new WindowsAudioEndPoint(new AudioEncoder(), m_audioOutDeviceIndex) : null;
+            var windowsVideoEndPoint = hasVideo ? new WindowsVideoEndPoint(new VpxVideoEncoder()) : null;
+
+            if (hasText)
+            {
+                RttEndPoint = new TextEndPoint();
+                RttEndPoint.OnTextReceived += (s, e) => TextReceived?.Invoke(this, e);
+            }
+            else
+            {
+                RttEndPoint = null;
+            }
 
             MediaEndPoints mediaEndPoints = new MediaEndPoints
             {
@@ -306,6 +331,8 @@ namespace SIPSorcery.SoftPhone
                 AudioSource = windowsAudioEndPoint,
                 VideoSink = windowsVideoEndPoint,
                 VideoSource = windowsVideoEndPoint,
+                TextSink = RttEndPoint,
+                TextSource = RttEndPoint,
             };
 
             // Fallback video source if a Windows webcam cannot be accessed.

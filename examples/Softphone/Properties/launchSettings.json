@@ -2,7 +2,7 @@
   "profiles": {
     "SIPSorcery.SoftPhone": {
       "commandName": "Project",
-      "nativeDebugging": true
+      "debugEngines": "managed-dotnet"
     }
   }
 }

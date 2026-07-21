@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------------
 // Filename: SIPUserAgent.cs
 //
 // Description: A "full" SIP user agent that encompasses both client and server 

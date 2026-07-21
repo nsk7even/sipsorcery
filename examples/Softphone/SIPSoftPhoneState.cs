@@ -15,6 +15,7 @@
 //-----------------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Net;
 using System.Xml;
@@ -39,6 +40,7 @@ namespace SIPSorcery.SoftPhone
         public static readonly string SIPFromName = ConfigurationManager.AppSettings["SIPFromName"];    // Get the SIP From display name from the config file.
         public static readonly bool UseAudioScope = Boolean.Parse(ConfigurationManager.AppSettings["UseAudioScope"]);
         public static int AudioOutDeviceIndex = Int32.Parse(ConfigurationManager.AppSettings["AudioOutDeviceIndex"]);
+        public static List<string> QuickDialEntries = new();
 
         public static IPAddress PublicIPAddress;
 
@@ -57,6 +59,24 @@ namespace SIPSorcery.SoftPhone
             }
 
             STUNServerHostname = ConfigurationManager.AppSettings[STUN_SERVER_KEY];
+
+            LoadQuickDialEntries();
+        }
+
+        private static void LoadQuickDialEntries()
+        {
+            try
+            {
+                var cfgValue = ConfigurationManager.AppSettings["Quick Dial Entries (csv)"];
+                if (cfgValue != null)
+                {
+                    QuickDialEntries.AddRange(cfgValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error at loading quick dial entries from application configuration file: {ex.Message}");
+            }
         }
 
         /// <summary>
