@@ -41,6 +41,8 @@ namespace SIPSorcery.SoftPhone
         public static readonly bool UseAudioScope = Boolean.Parse(ConfigurationManager.AppSettings["UseAudioScope"] ?? "false");
         public static int AudioOutDeviceIndex = Int32.Parse(ConfigurationManager.AppSettings["AudioOutDeviceIndex"] ?? "-1");
         public static readonly bool EnableLog = Boolean.Parse(ConfigurationManager.AppSettings["Enable Log"] ?? "false");
+        public static int RegisterRetryInSeconds = Int32.Parse(ConfigurationManager.AppSettings["SIP Register Retry Delay (seconds)"] ?? "60");
+        public static int? RegisterExpiry = Int32.TryParse(ConfigurationManager.AppSettings["SIP Register Expiration (seconds)"], out int registerExpiry) ? registerExpiry : null;
         public static List<string> QuickDialEntries = new();
 
         public static IPAddress PublicIPAddress;
