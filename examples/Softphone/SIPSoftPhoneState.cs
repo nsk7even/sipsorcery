@@ -41,11 +41,13 @@ namespace SIPSorcery.SoftPhone
         public static readonly bool UseAudioScope = Boolean.Parse(ConfigurationManager.AppSettings["UseAudioScope"] ?? "false");
         public static int AudioOutDeviceIndex = Int32.Parse(ConfigurationManager.AppSettings["AudioOutDeviceIndex"] ?? "-1");
         public static readonly bool EnableLog = Boolean.Parse(ConfigurationManager.AppSettings["Enable Log"] ?? "false");
-        public static int RegisterRetryInSeconds = Int32.Parse(ConfigurationManager.AppSettings["SIP Register Retry Delay (seconds)"] ?? "60");
-        public static int? RegisterExpiry = Int32.TryParse(ConfigurationManager.AppSettings["SIP Register Expiration (seconds)"], out int registerExpiry) ? registerExpiry : null;
-        public static List<string> QuickDialEntries = new();
+        public static readonly int RegisterRetryInSeconds = Int32.Parse(ConfigurationManager.AppSettings["SIP Register Retry Delay (seconds)"] ?? "60");
+        public static readonly int? RegisterExpiry = Int32.TryParse(ConfigurationManager.AppSettings["SIP Register Expiration (seconds)"], out int registerExpiry) ? registerExpiry : null;
+        public static readonly bool EnableRttDumps = Boolean.TryParse(ConfigurationManager.AppSettings["Enable RTT Message Dumps"], out bool enableRttDumps) && enableRttDumps;
+        public static readonly List<string> QuickDialEntries = new();
 
         public static IPAddress PublicIPAddress;
+
 
         static SIPSoftPhoneState()
         {
